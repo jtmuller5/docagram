@@ -1,4 +1,4 @@
-# RelationMap AI Chrome Extension
+# Docagram Chrome Extension
 
 A Chrome extension that uses Chrome's built-in AI APIs to analyze webpage content and generate visual relationship diagrams using Excalidraw.
 
