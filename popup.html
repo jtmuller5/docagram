@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RelationMap AI</title>
+  <style>
+    body {
+      width: 400px;
+      padding: 16px;
+      font-family: system-ui, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #stats {
+      font-size: 12px;
+      color: #666;
+    }
+    button {
+      padding: 8px 16px;
+      background: #70b1ec;
+      color: white;
+      border: none;
+      border-radius: 4px;  
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #error-message {
+      display: none;
+      color: #c92a2a;
+      padding: 8px;
+      border: 1px solid #c92a2a;
+      border-radius: 4px;
+    }
+    .loading {
+      display: none;
+    }
+    .loading.active {
+      display: block;
+    }
+    #excalidraw-container {
+      height: 400px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>RelationMap AI</h2>
+    
+    <div id="error-message"></div>
+    
+    <div id="stats">
+      <div>Max tokens: <span id="max-tokens"></span></div>
+      <div>Tokens left: <span id="tokens-left"></span></div>
+      <div>Tokens used: <span id="tokens-so-far"></span></div>
+      <div>Temperature: <span id="temperature"></span></div>
+      <div>Top K: <span id="top-k"></span></div>
+    </div>
+
+    <div>
+      <label>Temperature: <input type="range" id="session-temperature" min="0" max="1" step="0.1"></label>
+      <label>Top K: <input type="range" id="session-top-k" min="1" max="40"></label>
+    </div>
+
+    <button id="analyze">Analyze Page & Create Diagram</button>
+    <div id="loading" class="loading">Analyzing page content...</div>
+    
+    <div id="excalidraw-container"></div>
+  </div>
+
+  <script src="https://unpkg.com/@excalidraw/excalidraw/dist/excalidraw.production.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

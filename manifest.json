@@ -1,0 +1,19 @@
+{
+    "manifest_version": 3,
+    "name": "RelationMap AI",
+    "description": "Visualize page relationships using Chrome's built-in AI and Excalidraw",
+    "version": "1.0",
+    "permissions": [
+      "activeTab",
+      "scripting"
+    ],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"]
+      }
+    ]
+  }
