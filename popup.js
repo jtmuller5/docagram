@@ -187,54 +187,110 @@ document.addEventListener("DOMContentLoaded", async () => {
         function: () => document.body.innerText,
       });
 
-      const prompt = `
-        Analyze this text and identify key entities and their relationships.
-        For each relationship:
-        1. List the two related entities
-        2. Explain how they are connected
-        3. Describe the nature of their relationship
-
-        Format your response as a list of relationships where each relationship follows this structure:
-        Entity 1: [name]
-        Entity 2: [name]
-        Connection: [brief explanation]
-        Type: [relationship type]
-
-        Identify up to 5 of the most important relationships.
-
-        Examples:
-        Entity 1: Apple
-        Entity 2: iPhone
-        Connection: Apple manufactures iPhone
-        Type: Manufacturer
-
-        Entity 1: Google
-        Entity 2: Search Engine
-        Connection: Google is a search engine
-        Type: Classification
-        
-        Text to analyze: ${pageContent.substring(0, 3000)}
-
-        Relationships:
-
-        Entity 1:
-      `;
-
-      const stream = await session.promptStreaming(prompt);
-      let analysisResult = "";
-
-      // Show streaming output
-      for await (const chunk of stream) {
-        analysisResult = chunk;
-        elements.streamingOutput.textContent = analysisResult;
-        // Auto-scroll to bottom
-        elements.streamingOutput.scrollTop =
-          elements.streamingOutput.scrollHeight;
+      // Split content into chunks
+      const chunkSize = 500;
+      const chunks = [];
+      for (let i = 0; i < pageContent.length; i += chunkSize) {
+        chunks.push(pageContent.slice(i, i + chunkSize));
       }
 
-      // Parse and render after stream completes
-      const relationships = parseRelationships(analysisResult);
-      renderDiagram(relationships);
+      // Initialize the diagram code with styles
+      let nomnomlCode = defaultStyle + "\n";
+      let entityCount = 0;
+
+      // Analyze each chunk
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const prompt = `
+          Analyze this text chunk (${i + 1} of ${
+          chunks.length
+        }) and identify key relationships between entities.
+          Output the relationships using nomnoml diagram syntax.
+          
+          Rules:
+          1. Use proper nomnoml class syntax for entities
+          2. Add connection descriptions using notes
+          3. Use unique IDs for each element
+  
+          Example output format:
+          [<main id="e1">Google|Technology Company]
+          [<main id="e2">Chrome Browser|Software]
+          [e1] -> [e2]
+          [<note id="n1">Develops and maintains]
+          [n1] -- [e1]
+  
+          [<main id="e3">Chrome|Browser]
+          [<main id="e4">Web Extensions|Feature]
+          [e3] -> [e4]
+          [<note id="n2">Supports and runs]
+          [n2] -- [e3]
+  
+          Only output valid nomnoml syntax as shown above.
+          Start entity IDs from e${entityCount + 1}.
+          Start note IDs from n${entityCount + 1}.
+          Identify up to 3 key relationships from this chunk of text.
+          
+          Text chunk to analyze: ${chunk}
+        `;
+
+        elements.streamingOutput.textContent += `\n\nAnalyzing chunk ${
+          i + 1
+        } of ${chunks.length}...\n`;
+
+        // Process the chunk
+        const stream = await session.promptStreaming(prompt);
+        let chunkResult = "";
+
+        // Show streaming output for this chunk
+        for await (const chunkResponse of stream) {
+          chunkResult = chunkResponse;
+          elements.streamingOutput.textContent =
+            nomnomlCode + `\n\nChunk ${i + 1} output:\n` + chunkResult;
+          elements.streamingOutput.scrollTop =
+            elements.streamingOutput.scrollHeight;
+        }
+
+        // Update the total nomnoml code
+        if (chunkResult.trim()) {
+          nomnomlCode += "\n" + chunkResult;
+
+          // Update entity count for next chunk's IDs
+          // Count the number of [<main entries in the chunk
+          const newEntities = (chunkResult.match(/\[<main id="/g) || []).length;
+          entityCount += newEntities;
+
+          // Try to render the current diagram state
+          try {
+            const svg = nomnoml.renderSvg(nomnomlCode);
+            elements.diagram.innerHTML = svg;
+          } catch (error) {
+            console.error("Diagram render error:", error);
+            // Continue processing even if this render fails
+          }
+        }
+
+        // Brief pause between chunks
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      // Final diagram render
+      try {
+        const svg = nomnoml.renderSvg(nomnomlCode);
+        elements.diagram.innerHTML = svg;
+
+        // Add click handlers to elements
+        elements.diagram.querySelectorAll("g[data-name]").forEach((el) => {
+          el.style.cursor = "pointer";
+          el.onclick = (e) => {
+            const name = e.currentTarget.getAttribute("data-name");
+            console.log("Clicked:", name);
+          };
+        });
+      } catch (error) {
+        console.error("Failed to render final diagram:", error);
+        elements.errorMessage.style.display = "block";
+        elements.errorMessage.textContent = `Failed to render diagram: ${error.message}`;
+      }
     } catch (error) {
       console.error("Analysis failed:", error);
       elements.errorMessage.style.display = "block";
