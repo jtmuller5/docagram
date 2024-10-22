@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Configure nomnoml styling
-  const defaultStyle = `
+  const defaultStyle = '';/* `
     #arrowSize: 1
     #spacing: 50
     #padding: 8
@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     #edges: rounded
     #background: transparent
     #fill: #f1f3f5
-  `;
+  `; */
 
   function createNomnomlDiagram(relationships) {
     let nomnomlCode = defaultStyle + "\n";
@@ -70,57 +70,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     return nomnomlCode;
-  }
-
-  function renderDiagram(relationships) {
-    console.log("Rendering diagram:", relationships);
-    try {
-      const nomnomlCode = createNomnomlDiagram(relationships);
-      const svg = nomnoml.renderSvg(nomnomlCode);
-      elements.diagram.innerHTML = svg;
-
-      // Add click handlers to elements
-      elements.diagram.querySelectorAll("g[data-name]").forEach((el) => {
-        el.style.cursor = "pointer";
-        el.onclick = (e) => {
-          const name = e.currentTarget.getAttribute("data-name");
-          console.log("Clicked:", name);
-          // You can add more interactivity here
-        };
-      });
-    } catch (error) {
-      console.error("Failed to render diagram:", error);
-      elements.errorMessage.style.display = "block";
-      elements.errorMessage.textContent = `Failed to render diagram: ${error.message}`;
-    }
-  }
-
-  function parseRelationships(analysisText) {
-    const blocks = analysisText.split("\n\n").filter((block) => block.trim());
-    const relationships = [];
-
-    for (const block of blocks) {
-      const lines = block.split("\n");
-      const relationship = {};
-
-      for (const line of lines) {
-        if (line.startsWith("Entity 1:")) {
-          relationship.entity1 = line.replace("Entity 1:", "").trim();
-        } else if (line.startsWith("Entity 2:")) {
-          relationship.entity2 = line.replace("Entity 2:", "").trim();
-        } else if (line.startsWith("Connection:")) {
-          relationship.connection = line.replace("Connection:", "").trim();
-        } else if (line.startsWith("Type:")) {
-          relationship.type = line.replace("Type:", "").trim();
-        }
-      }
-
-      if (relationship.entity1 && relationship.entity2) {
-        relationships.push(relationship);
-      }
-    }
-
-    return relationships;
   }
 
   // Initialize session settings
@@ -170,6 +119,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     elements.stats.topK.textContent = formatter.format(topK);
   }
 
+  function parseRelationshipsToNomnoml(relationshipText) {
+    const relationships = [];
+    const uniqueEntities = new Set();
+    let entityCount = 0;
+    let noteCount = 0;
+    
+    // Split into lines and process each relationship
+    const lines = relationshipText.split('\n');
+    for (const line of lines) {
+      // Look for the pattern: Entity1 to Entity2 (Description)
+      const match = line.match(/([^()]+?)\s+to\s+([^()]+?)\s*\(([^)]+)\)/i);
+      if (match) {
+        const entity1 = match[1].trim();
+        const entity2 = match[2].trim();
+        uniqueEntities.add(entity1);
+        uniqueEntities.add(entity2);
+        relationships.push({
+          entity1,
+          entity2,
+          description: match[3].trim()
+        });
+      }
+    }
+  
+    // Convert relationships to nomnoml syntax
+    let nomnomlCode = "";
+    const entityIds = new Map();
+  
+    // First add all unique entities with IDs
+    for (const entity of uniqueEntities) {
+      const entityId = `e${++entityCount}`;
+      entityIds.set(entity, entityId);
+      nomnomlCode += `[<main id="${entityId}">${entity}]\n`;
+    }
+    nomnomlCode += '\n';
+  
+    // Then add all relationships
+    for (const rel of relationships) {
+      const entity1Id = entityIds.get(rel.entity1);
+      const entity2Id = entityIds.get(rel.entity2);
+      
+      // Add relationship arrow
+      nomnomlCode += `[${rel.entity1}] -> [${rel.entity2}]\n`;
+      
+      // Add description note if present
+      if (rel.description) {
+        const noteId = `n${++noteCount}`;
+        nomnomlCode += `[<note id="${noteId}">${rel.description}]\n`;
+        nomnomlCode += `[${rel.entity1}] -- [${rel.description}] -- [${rel.entity2}]\n`;
+      }
+      
+      nomnomlCode += '\n';
+    }
+  
+    return nomnomlCode;
+  }
+
   async function analyzePageContent() {
     try {
       elements.loadingDiv.classList.add("active");
@@ -177,7 +183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       elements.errorMessage.style.display = "none";
       elements.streamingOutput.style.display = "block";
       elements.streamingOutput.textContent = ""; // Clear previous content
-
+  
       const [tab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
@@ -186,98 +192,86 @@ document.addEventListener("DOMContentLoaded", async () => {
         target: { tabId: tab.id },
         function: () => document.body.innerText,
       });
-
+  
       // Split content into chunks
-      const chunkSize = 500;
+      const chunkSize = 3000;
       const chunks = [];
       for (let i = 0; i < pageContent.length; i += chunkSize) {
         chunks.push(pageContent.slice(i, i + chunkSize));
       }
-
-      // Initialize the diagram code with styles
-      let nomnomlCode = defaultStyle + "\n";
-      let entityCount = 0;
-
+  
+      // Initialize complete nomnoml code with styles
+      let completeNomnomlCode = defaultStyle + "\n";
+      let allRelationshipsText = "";
+  
       // Analyze each chunk
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         const prompt = `
-          Analyze this text chunk (${i + 1} of ${
-          chunks.length
-        }) and identify key relationships between entities.
-          Output the relationships using nomnoml diagram syntax.
+          Analyze this text chunk (${i + 1} of ${chunks.length}) and identify key relationships between entities.
+          Express each relationship using this format: [First Entity] to [Second Entity] (Description of relationship)
+  
+          Format rules:
+          1. Each line should be: Entity1 to Entity2 (Description)
+          2. Keep entity names clear but concise
+          3. Place the relationship description in parentheses
+          4. Make descriptions brief and specific
+          5. Find up to 3 key relationships from this chunk
           
-          Rules:
-          1. Use proper nomnoml class syntax for entities
-          2. Add connection descriptions using notes
-          3. Use unique IDs for each element
-  
-          Example output format:
-          [<main id="e1">Google|Technology Company]
-          [<main id="e2">Chrome Browser|Software]
-          [e1] -> [e2]
-          [<note id="n1">Develops and maintains]
-          [n1] -- [e1]
-  
-          [<main id="e3">Chrome|Browser]
-          [<main id="e4">Web Extensions|Feature]
-          [e3] -> [e4]
-          [<note id="n2">Supports and runs]
-          [n2] -- [e3]
-  
-          Only output valid nomnoml syntax as shown above.
-          Start entity IDs from e${entityCount + 1}.
-          Start note IDs from n${entityCount + 1}.
-          Identify up to 3 key relationships from this chunk of text.
+          Examples:
+          Google to Chrome Browser (develops and maintains the browser)
+          Chrome to Web Extensions (provides platform and APIs)
+          Microsoft to Windows (develops and distributes operating system)
+          
+          Only output the relationships, no additional text or explanation.
+          Each relationship should be on its own line.
           
           Text chunk to analyze: ${chunk}
         `;
-
-        elements.streamingOutput.textContent += `\n\nAnalyzing chunk ${
-          i + 1
-        } of ${chunks.length}...\n`;
-
+  
+        elements.streamingOutput.textContent += `\n\nAnalyzing chunk ${i + 1} of ${chunks.length}...\n`;
+        
         // Process the chunk
         const stream = await session.promptStreaming(prompt);
         let chunkResult = "";
-
+        
         // Show streaming output for this chunk
         for await (const chunkResponse of stream) {
           chunkResult = chunkResponse;
-          elements.streamingOutput.textContent =
-            nomnomlCode + `\n\nChunk ${i + 1} output:\n` + chunkResult;
-          elements.streamingOutput.scrollTop =
-            elements.streamingOutput.scrollHeight;
+          elements.streamingOutput.textContent = 
+            allRelationshipsText + 
+            `\n\nChunk ${i + 1} output:\n` + 
+            chunkResult;
+          elements.streamingOutput.scrollTop = elements.streamingOutput.scrollHeight;
         }
-
-        // Update the total nomnoml code
+  
+        // Store the complete response for this chunk
+        allRelationshipsText += `\n\nChunk ${i + 1} results:\n` + chunkResult;
+  
+        // Convert chunk relationships to nomnoml and update diagram
         if (chunkResult.trim()) {
-          nomnomlCode += "\n" + chunkResult;
-
-          // Update entity count for next chunk's IDs
-          // Count the number of [<main entries in the chunk
-          const newEntities = (chunkResult.match(/\[<main id="/g) || []).length;
-          entityCount += newEntities;
-
+          const nomnomlCode = parseRelationshipsToNomnoml(chunkResult);
+          completeNomnomlCode += nomnomlCode;
+  
           // Try to render the current diagram state
           try {
-            const svg = nomnoml.renderSvg(nomnomlCode);
+            const svg = nomnoml.renderSvg(completeNomnomlCode);
             elements.diagram.innerHTML = svg;
           } catch (error) {
             console.error("Diagram render error:", error);
             // Continue processing even if this render fails
           }
         }
-
+  
         // Brief pause between chunks
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-
+  
       // Final diagram render
       try {
-        const svg = nomnoml.renderSvg(nomnomlCode);
+        const svg = nomnoml.renderSvg(completeNomnomlCode);
         elements.diagram.innerHTML = svg;
-
+  
         // Add click handlers to elements
         elements.diagram.querySelectorAll("g[data-name]").forEach((el) => {
           el.style.cursor = "pointer";
@@ -291,10 +285,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         elements.errorMessage.style.display = "block";
         elements.errorMessage.textContent = `Failed to render diagram: ${error.message}`;
       }
+  
     } catch (error) {
       console.error("Analysis failed:", error);
       elements.errorMessage.style.display = "block";
-      elements.errorMessage.textContent = `Analysis failed: ${error.message}`;
+      elements.errorMessage.textContent = `Analysis failed: ${error.message} (${error.name})`;
     } finally {
       elements.loadingDiv.classList.remove("active");
       elements.analyzeButton.disabled = false;
