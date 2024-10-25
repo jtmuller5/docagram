@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     controls: {
       sessionTemperature: document.getElementById("session-temperature"),
       sessionTopK: document.getElementById("session-top-k"),
+      showNotes: document.getElementById("show-notes"),
     },
   };
 
@@ -25,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let relationships = [];
   let uniqueEntities = new Set();
   let selectedEntity = null;
+  let showNotes = true;
 
   // Check for AI support
   if (!self.ai?.languageModel) {
@@ -36,14 +38,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Configure nomnoml styling
   const defaultStyle = `
-      #arrowSize: 1
-      #spacing: 50
-      #padding: 8
-      #fontSize: 12
-      #lineWidth: 2
-      #edges: rounded
-      #background: transparent
-      #fill: #f1f3f5
+#arrowSize: 1
+#spacing: 50
+#padding: 8
+#fontSize: 12
+#lineWidth: 2
+#edges: rounded
+#background: transparent
+#fill: #f1f3f5
     `;
 
   // Relationship handling functions
@@ -91,22 +93,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function showEntityRelationships(entity) {
     selectedEntity = entity;
-    updateEntitiesList(); // Update button states
+    updateEntitiesList();
 
-    // Filter relationships for selected entity
     const relevantRelationships = relationships.filter(
       (rel) => rel.entity1 === entity || rel.entity2 === entity
     );
 
-    let nomnomlCode = ""; //defaultStyle;
+    let nomnomlCode = defaultStyle;
 
     relevantRelationships.forEach((rel) => {
       const entity1Id = `e${simpleHash(rel.entity1)}`;
       const entity2Id = `e${simpleHash(rel.entity2)}`;
       const noteId = `n${simpleHash(rel.description)}`;
-
-      nomnomlCode += `[<main id="${entity1Id}">${rel.entity1}] -> [<main id="${entity2Id}">${rel.entity2}]\n`;
-      nomnomlCode += `[<main id="${entity1Id}">${rel.entity1}] -- [<note id="${noteId}">${rel.description}] -- [<main id="${entity2Id}">${rel.entity2}]\n`;
+   
+      // Only add notes if showNotes is true
+      if (showNotes) {
+        nomnomlCode += `[<main id="${entity1Id}">${rel.entity1}] - [<note id="${noteId}">${rel.description}] -> [<main id="${entity2Id}">${rel.entity2}]\n`;
+      } else {
+        nomnomlCode += `[<main id="${entity1Id}">${rel.entity1}] -> [<main id="${entity2Id}">${rel.entity2}]\n`;
+      }
     });
 
     try {
@@ -325,6 +330,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     elements.stats.temperature.textContent =
       elements.controls.sessionTemperature.value;
     updateSession();
+  });
+  elements.controls.showNotes.addEventListener("change", (e) => {
+    showNotes = e.target.checked; 
+    if (selectedEntity) {
+      showEntityRelationships(selectedEntity);
+    }
   });
   elements.controls.sessionTopK.addEventListener("input", () => {
     elements.stats.topK.textContent = elements.controls.sessionTopK.value;

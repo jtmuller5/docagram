@@ -114,6 +114,23 @@
         color: white;
       }
 
+      .toggle-container {
+        margin: 16px 0;
+      }
+
+      .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .toggle-label input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+      }
+
       #diagram {
         margin-top: 16px;
       }
@@ -168,6 +185,12 @@
       </div>
     </div>
 
+    <div class="control-group toggle-container">
+      <label class="toggle-label">
+        <input type="checkbox" id="show-notes" checked />
+        Show relationship descriptions
+      </label>
+    </div>
     <div class="stats">
       <div class="stats-grid">
         <div>
