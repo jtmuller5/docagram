@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Docagram</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: system-ui;
+        color: #333;
+      }
+
+      #error-message {
+        display: none;
+        color: #d32f2f;
+        background: #ffebee;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      #loading {
+        display: none;
+        color: #1a73e8;
+      }
+
+      #loading.active {
+        display: block;
+      }
+
+      .stats {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 4px;
+        margin: 16px 0;
+        font-size: 0.9em;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .stat-label {
+        color: #666;
+      }
+
+      .controls {
+        margin: 16px 0;
+      }
+
+      .control-group {
+        margin-bottom: 12px;
+      }
+
+      .control-group label {
+        display: block;
+        margin-bottom: 4px;
+        color: #666;
+      }
+
+      input[type="range"] {
+        width: 100%;
+      }
+
+      #streaming-output {
+        display: none;
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 4px;
+        margin: 16px 0;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      #streaming-output.active {
+        display: block;
+      }
+
+      .entities-container {
+        display: none;
+        margin: 16px 0;
+      }
+
+      .entities-container.active {
+        display: block;
+      }
+
+      .entities-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 8px 0;
+      }
+
+      .entity-button {
+        background: #e9ecef;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 16px;
+        cursor: pointer;
+        font-size: 0.9em;
+      }
+
+      .entity-button:hover {
+        background: #dee2e6;
+      }
+
+      .entity-button.active {
+        background: #1a73e8;
+        color: white;
+      }
+
+      #diagram {
+        margin-top: 16px;
+      }
+
+      #diagram svg {
+        max-width: 100%;
+        height: auto;
+      }
+
+      .button {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .button:hover:not(:disabled) {
+        background: #1557b0;
+      }
+
+      .button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="error-message"></div>
+
+    <button id="analyze" class="button">Analyze Page Content</button>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="session-temperature"
+          >Temperature: <span id="temperature">0.3</span></label
+        >
+        <input
+          type="range"
+          id="session-temperature"
+          min="0"
+          max="1"
+          step="0.1"
+          value="0.3"
+        />
+      </div>
+      <div class="control-group">
+        <label for="session-top-k">Top K: <span id="top-k">40</span></label>
+        <input type="range" id="session-top-k" min="1" max="40" value="40" />
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stats-grid">
+        <div>
+          <div class="stat-label">Max Tokens:</div>
+          <div id="max-tokens">-</div>
+        </div>
+        <div>
+          <div class="stat-label">Tokens Left:</div>
+          <div id="tokens-left">-</div>
+        </div>
+        <div>
+          <div class="stat-label">Tokens So Far:</div>
+          <div id="tokens-so-far">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading">Analyzing content...</div>
+    <div id="streaming-output"></div>
+
+    <div id="entities-container" class="entities-container">
+      <h3>Entities</h3>
+      <div class="entities-list"></div>
+    </div>
+
+    <div id="diagram"></div>
+
+    <script src="libs/graphre.js"></script>
+    <script src="libs/nomnoml.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
