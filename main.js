@@ -3,8 +3,7 @@ import { ContentService } from "./services/contentService.js";
 import { RelationshipManager } from "./models/relationship.js";
 import { DiagramView } from "./views/diagramView.js";
 import { UIManager } from "./views/uiManager.js";
-import { StreamingOutputManager } from './services/StreamingOutputManager.js';
-
+import { StreamingOutputManager } from "./services/StreamingOutputManager.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const elements = {
@@ -15,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     streamingOutput: document.getElementById("streaming-output"),
     entitiesContainer: document.getElementById("entities-container"),
     entitiesList: document.querySelector(".entities-list"),
+    summarizeCheckbox: document.getElementById("enable-summarize"),
     stats: {
       maxTokens: document.getElementById("max-tokens"),
       tokensLeft: document.getElementById("tokens-left"),
@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  async function analyzePageContent() {
+  async function analyzePageContent(options = { shouldSummarize: true }) {
     const outputManager = new StreamingOutputManager("streaming-output");
 
     try {
@@ -119,7 +119,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       uiManager.showLoading(true);
       outputManager.clear();
 
-      const pageContent = await ContentService.getPageContent();
+      let pageContent = await ContentService.getPageContent();
+
+      // Optional summarization step
+      if (options.shouldSummarize && pageContent.length > 2000) {
+        outputManager.update("Summarizing content for analysis...\n");
+        pageContent = await aiService.summarizeContent(pageContent);
+        console.log("Summarized content:", pageContent);
+        outputManager.update("Summarization complete. Starting analysis...\n");
+      }
+
       const chunks = ContentService.splitIntoChunks(pageContent);
       let allRelationshipsText = "";
 
@@ -130,6 +139,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             `\n\nAnalyzing chunk ${i + 1} of ${chunks.length}...\n`
         );
 
+        // Yield control to update UI
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
         const stream = await aiService.streamAnalysis(chunk, i, chunks.length);
         let chunkResult = "";
 
@@ -138,6 +150,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           await outputManager.update(
             allRelationshipsText + `\n\nChunk ${i + 1} output:\n` + chunkResult
           );
+
+          // Yield control to update UI
+          await new Promise((resolve) => setTimeout(resolve, 0));
         }
 
         allRelationshipsText += `\n\nChunk ${i + 1} results:\n` + chunkResult;
@@ -148,7 +163,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           showEntityRelationships
         );
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Yield control to update UI
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     } catch (error) {
       console.error("Analysis failed:", error);
@@ -163,8 +179,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function handleAnalyzeClick() {
+    const shouldSummarize = elements.summarizeCheckbox.checked;
+    analyzePageContent({ shouldSummarize });
+  }
+
   // Event Listeners
-  elements.analyzeButton.addEventListener("click", analyzePageContent);
+
+  elements.analyzeButton.addEventListener("click", handleAnalyzeClick);
   elements.controls.showNotes.addEventListener("change", () => {
     if (relationshipManager.selectedEntity) {
       showEntityRelationships(relationshipManager.selectedEntity);

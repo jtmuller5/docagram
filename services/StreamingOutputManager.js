@@ -23,22 +23,17 @@ export class StreamingOutputManager {
     return `<div class="text-gray-600">${text}</div>`;
   }
 
-  update(newContent) {
+  async update(newContent) {
     try {
-      console.log("Updating content...");
       this.content = newContent;
-      console.log("New content set:", this.content);
 
       const formattedContent = this.content
         .split("\n")
         .map((line) => this.formatChunkHeader(line))
         .join("");
 
-      console.log("Formatted content:", formattedContent);
       this.container.innerHTML = formattedContent;
       this.container.scrollTop = this.container.scrollHeight;
-
-      console.log("Content updated in the container.");
     } catch (error) {
       console.error("Error updating content:", error);
     }

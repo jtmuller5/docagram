@@ -65,7 +65,7 @@
       }
 
       #streaming-output {
-        display: none;
+        display: block;
         background: #f8f9fa;
         padding: 12px;
         border-radius: 4px;
@@ -74,10 +74,6 @@
         white-space: pre-wrap;
         max-height: 200px;
         overflow-y: auto;
-      }
-
-      #streaming-output.active {
-        display: block;
       }
 
       .entities-container {
@@ -205,6 +201,10 @@
       <label class="toggle-label">
         <input type="checkbox" id="show-notes" checked />
         Show relationship descriptions
+      </label>
+      <label>
+        <input type="checkbox" id="enable-summarize" checked>
+        Summarize long content
       </label>
     </div>
     <div class="stats">
