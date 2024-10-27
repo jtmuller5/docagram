@@ -131,6 +131,22 @@
         height: 16px;
       }
 
+      .loading-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #3b82f6;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
       #diagram {
         margin-top: 16px;
       }
@@ -220,6 +236,6 @@
 
     <script src="libs/graphre.js"></script>
     <script src="libs/nomnoml.js"></script>
-    <script src="sidepanel.js"></script>
+    <script type="module" src="main.js"></script>
   </body>
 </html>

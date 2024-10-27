@@ -3,14 +3,9 @@
   "name": "Docagram",
   "description": "Generate relationship diagrams from page content using Chrome's built-in AI",
   "version": "1.0",
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "sidePanel"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "options_page": "settings.html",
   "action": {
     "default_title": "Open Docagram"
   },
