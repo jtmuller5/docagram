@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const aiService = new AIService();
   const relationshipManager = new RelationshipManager();
   const diagramView = new DiagramView();
-  const uiManager = new UIManager(elements);
+  const uiManager = new UIManager(elements, relationshipManager);
 
   // Check AI support
   if (!(await aiService.checkSupport())) {
